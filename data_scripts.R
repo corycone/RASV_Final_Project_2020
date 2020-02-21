@@ -15,7 +15,7 @@ colnames(cneos_sentry_summary_data) <- c("Object", "Year Range", "Potential Impa
 cneos_closeapproach_data$`Close-Approach Date` <-  substring(cneos_closeapproach_data$`Close-Approach Date`,1,11)
 
 collision_NEO <- inner_join(cneos_closeapproach_data, cneos_sentry_summary_data, by = "UniqueID")
-
+collision_NEO$Object.x <- gsub('[\\(\\)]', '', collision_NEO$Object.x)
 
 str(cneos_closeapproach_data)
 # NEO dataset has 148022 observations of 9 variables
@@ -64,3 +64,58 @@ nrow(distinct(cneos_sentry_summary_data %>% select("Object")))
 #986 possible collision points
 
 str(cneos_closeapproach_data)
+
+#finding years with most close calls
+ca_years <- ymd(collision_NEO$`Close-Approach Date`)
+
+colnames(ca_years) <- "Year"
+
+str(ca_years)
+
+year(ca_years)
+
+ggplot(data.frame(ca_years), aes(x = year(ca_years))) + geom_histogram()
+
+year_count <- as.data.frame(table(year(ca_years)))
+
+view(year_count)
+
+max(year_count$Freq)
+year_count[which.max(year_count$Freq),]
+year_count[which.min(year_count$Freq),]
+
+colnames(collision_NEO)
+
+
+collision_NEO$Object.x <- gsub('[\\(\\)]', '', collision_NEO$Object.x)
+
+
+#average size
+
+collision_NEO$size <- sapply(collision_NEO$`Est. Diameter.x`, function(d) {
+  match <- str_match(d, '([-+]?[0-9]*\\.?[0-9]+) (k?m)( - ([-+]?[0-9]*\\.?[0-9]+) (k?m))?')
+  
+  # Extract low value.
+  low <- as.numeric(match[2])
+  if (match[3] == 'km') {
+    # Convert to meters.
+    low <- low * 1000
+  }
+  
+  # Extract high value, if available.
+  high <- low
+  if (!is.na(match[5])) {
+    high <- as.numeric(match[5])
+    
+    if (match[6] == 'km') {
+      # Convert to meters.
+      high <- high * 1000
+    }
+  }
+  
+  # Use average of low and high.
+  mean(c(low, high))
+})
+
+
+mean(c(20,45))
