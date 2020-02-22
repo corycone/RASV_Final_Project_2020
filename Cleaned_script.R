@@ -21,16 +21,25 @@ colnames(cneos_sentry_summary_data) <- c("Object", "Year_Range", "Potential_Impa
 # fix dates (no time)
 
 cneos_closeapproach_data$`Close-Approach_Date` <-  substring(cneos_closeapproach_data$`Close-Approach_Date`,1,11)
+
+#remove undesired columns. These columns will not be considered for this particular analysis.
+
+cneos_closeapproach_data  <- select(cneos_closeapproach_data, -V_Infinity, -H, CA_Distance_Minimum)
+
+cneos_sentry_summary_data <- select(cneos_sentry_summary_data, -Est._Diameter, -Object, -V_Infinity, -H)
+
+ 
 # create collision dataset, fix Object name
 
 collision_NEO <- inner_join(cneos_closeapproach_data, cneos_sentry_summary_data, by = "UniqueID")
-collision_NEO$Object.x <- gsub('[\\(\\)]', '', collision_NEO$Object.x)
+collision_NEO_left <- left_join(cneos_closeapproach_data, cneos_sentry_summary_data, by = "UniqueID")
+collision_NEO$Object <- gsub('[\\(\\)]', '', collision_NEO$Object)
 
 # narrow down columns
-collision_NEO <- collision_NEO %>% select(colnames(collision_NEO)[c(1,2,3,4,5,6,7,8,9,11, 12,13,14,16, 17, 18,19)])
+#collision_NEO <- collision_NEO %>% select(colnames(collision_NEO)[c(1,2,3,4,5,6,7,8,9,11, 12,13,14,16, 17, 18,19)])
 
 # fix join naming errors
-colnames(collision_NEO)[c(1,6,7,8)] <- c("Object", "V_Infinity", "H", "Est._Diameter")
+#colnames(collision_NEO)[c(1,6,7,8)] <- c("Object", "V_Infinity", "H", "Est._Diameter")
 
 # create average diameter column
 
@@ -52,7 +61,11 @@ collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min <- c("1000","1000","1
 #convert to numeric
 collision_NEO$diam_min <- as.numeric(collision_NEO$diam_min)
 
+# Palermo Scale Translation
 
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < -2 ] <- "No Concern"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < 1 & collision_NEO$Palermo_Scale_max > -2] <- "Careful Monitoring"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max > 0 ] <- "Some Concern"
 
 #create max diameter
 collision_NEO$diam_max <- str_split_fixed(collision_NEO$Est._Diameter, "-", 2)[1:nrow(collision_NEO),2]
@@ -72,10 +85,17 @@ collision_NEO$diam_max <- as.numeric(collision_NEO$diam_max)
 #create average diameter
 collision_NEO$avg_diameter <- (collision_NEO$diam_min + collision_NEO$diam_max)/2
 
+#remove original estimated diameter column.
+collision_NEO <- select(collision_NEO, -Est._Diameter)
+
+#P
+
+
 #diameter histogram
 all_diam <- data.frame(collision_NEO$avg_diameter)
 colnames(all_diam) <- "Avg_Diameter"
 
+#Initial Histogram of NEO Size
 ggplot(all_diam, aes(x = Avg_Diameter)) +
   geom_histogram(bins = 45, fill = "#253494", color = "#081d58") +
   theme_classic() +
@@ -84,3 +104,72 @@ ggplot(all_diam, aes(x = Avg_Diameter)) +
        x = "Avg Diameter",
        y = "Number of NEOs") +
   xlim(0,180)
+
+Total_NEO <- nrow(data.table(unique(cneos_closeapproach_data$Object)))
+Total_NEO_Collision <- nrow(data.table(unique(cneos_sentry_summary_data$UniqueID)))
+
+#percent of NEOs with Strike probabiltiy
+(Total_NEO_Collision/Total_NEO)*100
+#min max
+max(collision_NEO$V_Relative)
+min(collision_NEO$V_Relative)
+
+ggplot(collision_NEO, aes(x = collision_NEO$V_Relative, y = collision_NEO$avg_diameter)) +
+  geom_point() + stat_smooth()
+
+#negligible correlation
+cor(collision_NEO$V_Relative, collision_NEO$avg_diameter)
+
+
+#filter Jan12000 - Dec 31 2020
+collision_NEO_00_20 <- collision_NEO %>% filter(year(ymd(collision_NEO$`Close-Approach_Date`)) > "1999") 
+
+#plot
+ggplot(collision_NEO_00_20, aes(x = collision_NEO_00_20$V_Relative, y = collision_NEO_00_20$avg_diameter)) +
+  geom_point() + stat_smooth()
+
+mod <- lm(collision_NEO_00_20$avg_diameter ~ collision_NEO_00_20$V_Relative, data = collision_NEO_00_20)
+summary(mod)
+
+fitted(mod)
+
+coefficients(mod) 
+
+ggplot(collision_NEO_00_20, aes(x = collision_NEO_00_20$V_Relative, y = collision_NEO_00_20$Object)) +
+  geom_boxplot()
+
+gsub("\\..*","",collision_NEO_00_20$CA_Distance_Nominal)
+
+t.test(collision_NEO_00_20$avg_diameter, collision_NEO$avg_diameter)
+
+#scale
+
+max(collision_NEO_00_20$Palermo_Scale_max)
+
+collision_NEO_00_20$pscale <- collision_NEO_00_20$Palermo_Scale_max
+
+collision_NEO_00_20$pscale[collision_NEO_00_20$Palermo_Scale_max < -2 ] <- "No Concern"
+collision_NEO_00_20$pscale[collision_NEO_00_20$Palermo_Scale_max < 1 & collision_NEO_00_20$Palermo_Scale_max > -2] <- "Careful Monitoring"
+collision_NEO_00_20$pscale[collision_NEO_00_20$Palermo_Scale_max > 0 ] <- "Some Concern"
+
+ggplot(collision_NEO_00_20, aes(x = factor(collision_NEO_00_20$pscale), y = collision_NEO_00_20$V_Relative)) +
+  geom_point(size = collision_NEO_00_20$avg_diameter/65, alpha = .1) +
+  labs()
+
+#color prep
+future_neo <- collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 2019,]
+
+#plotting pscale concern levels. Diameter divided by 65 for point size comparrison.
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$V_Relative)) +
+  geom_point(size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
+  geom_point(data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, color = "red") +
+  labs(title = "Palermo Scale of All NEOs vs Velocity (km/second)",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
+       x = "Palermo Scale",
+       y = "Velocity(km/s)") +
+  theme_minimal()
+
+
+
+collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 2019,]
+
