@@ -235,7 +235,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$Palermo_Scale_max, y = collision_NEO
        x = "Palermo Scale",
        y = "Average Diameter (log10)") +
   scale_y_log10() +
-  stat_smooth() +
+  #stat_smooth() +
   theme_minimal()
 
 cor(collision_NEO$Palermo_Scale_max,collision_NEO$avg_diameter )
