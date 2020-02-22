@@ -88,6 +88,7 @@ collision_NEO$avg_diameter <- (collision_NEO$diam_min + collision_NEO$diam_max)/
 #remove original estimated diameter column.
 collision_NEO <- select(collision_NEO, -Est._Diameter)
 
+collision_NEO$approach_year <- year(ymd(collision_NEO$`Close-Approach_Date`))
 #P
 
 
@@ -161,15 +162,97 @@ future_neo <- collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 201
 
 #plotting pscale concern levels. Diameter divided by 65 for point size comparrison.
 ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$V_Relative)) +
-  geom_point(size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
-  geom_point(data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, color = "red") +
+  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
+  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
   labs(title = "Palermo Scale of All NEOs vs Velocity (km/second)",
        subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
        x = "Palermo Scale",
        y = "Velocity(km/s)") +
   theme_minimal()
 
+#future
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$V_Relative)) +
+  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
+  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+  labs(title = "Palermo Scale of All NEOs vs Velocity (km/second)",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
+       x = "Palermo Scale",
+       y = "Velocity(km/s)") +
+  theme_minimal()
+
+#
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$V_Relative)) +
+  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
+  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+  labs(title = "Velocity (km/second) of all NEOs, by Palermo Scale Level",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.
+One point = 1 Approach",
+       x = "Palermo Scale",
+       y = "Velocity(km/s)") +
+  theme_minimal()
 
 
-collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 2019,]
+neo_coll_scale_speed <- collision_NEO %>% select("Object", "V_Relative", "pscale", "avg_diameter")
+neo_coll_scale_speed <- unique(neo_coll_scale_speed)
+#x 
+ggplot(neo_coll_scale_speed, aes(x = factor(neo_coll_scale_speed$pscale), y = neo_coll_scale_speed$V_Relative)) +
+  geom_point(position = "jitter", size = neo_coll_scale_speed$avg_diameter/65, alpha = .3, color = "skyblue") +
+  #geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$V_Relative), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+  labs(title = "Velocity (km/second) of all NEOs, by Palermo Scale Level",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.
+One point = 1 Approach",
+       x = "Palermo Scale",
+       y = "Velocity(km/s)") +
+  theme_minimal()
 
+
+
+ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter, y = collision_NEO$Palermo_Scale_max)) +
+  geom_point(position = "jitter",  alpha = .3, color = "skyblue") +
+  geom_point(position = "jitter", data = future_neo, aes(x = future_neo$avg_diameter), y = future_neo$Palermo_Scale_max, alpha = .3, colour = "red") +
+  labs(title = "Velocity (km/second) of all NEOs, by Palermo Scale Level",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
+       x = "Palermo Scale",
+       y = "Velocity(km/s)") +
+  scale_y_log10() +
+  theme_minimal()
+
+#scatter
+
+neo_model <- lm(collision_NEO$avg_diameter ~ collision_NEO$Palermo_Scale_max, data = collision_NEO)
+summary(neo_model)
+coefficients(neo_model)
+
+ggplot(collision_NEO, aes(x = collision_NEO$Palermo_Scale_max, y = collision_NEO$avg_diameter)) +
+  geom_point(alpha = .6, 
+             color = "skyblue") +
+  geom_point(data = future_neo, aes(x = future_neo$Palermo_Scale_max, y = future_neo$avg_diameter), 
+             alpha = .6, 
+             colour = "red") +
+  #geom_abline(slope = coefficients(neo_model)[[2]], intercept = coefficients(neo_model)[[1]], color="Green") +
+  labs(title = "Palermo Scale vs Average Diameter (log10 scale)",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
+       x = "Palermo Scale",
+       y = "Average Diameter (log10)") +
+  scale_y_log10() +
+  stat_smooth() +
+  theme_minimal()
+
+cor(collision_NEO$Palermo_Scale_max,collision_NEO$avg_diameter )
+
+
+ggplot(collision_NEO[collision_NEO$approach_year > "1999" & collision_NEO$approach_year < "2020",], 
+       aes(x = collision_NEO[collision_NEO$approach_year > "1999" & collision_NEO$approach_year < "2020",]$Palermo_Scale_max, 
+           y = collision_NEO[collision_NEO$approach_year > "1999" & collision_NEO$approach_year < "2020",]$avg_diameter)) +
+  geom_point(alpha = .6, color = color) +
+  scale_y_log10() +
+  #stat_smooth() +
+  facet_wrap(~approach_year)
+
+
+color <- ifelse(collision_NEO[collision_NEO$approach_year > "1999" & collision_NEO$approach_year < "2020",]$Palermo_Scale_max > -2,'red','skyblue')
+
+palermo_concern <- collision_NEO[collision_NEO$pscale == "Careful Monitoring",]
+
+ggplot(palermo_concern, aes(x = palermo_concern$avg_diameter, y = palermo_concern$Potential_Impacts)) +
+         geom_point()
