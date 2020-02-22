@@ -90,32 +90,6 @@ colnames(collision_NEO)
 collision_NEO$Object.x <- gsub('[\\(\\)]', '', collision_NEO$Object.x)
 
 
-#average size
-
-collision_NEO$size <- sapply(collision_NEO$`Est. Diameter.x`, function(d) {
-  match <- str_match(d, '([-+]?[0-9]*\\.?[0-9]+) (k?m)( - ([-+]?[0-9]*\\.?[0-9]+) (k?m))?')
-  
-  # Extract low value.
-  low <- as.numeric(match[2])
-  if (match[3] == 'km') {
-    # Convert to meters.
-    low <- low * 1000
-  }
-  
-  # Extract high value, if available.
-  high <- low
-  if (!is.na(match[5])) {
-    high <- as.numeric(match[5])
-    
-    if (match[6] == 'km') {
-      # Convert to meters.
-      high <- high * 1000
-    }
-  }
-  
-  # Use average of low and high.
-  mean(c(low, high))
-})
 
 
 mean(c(20,45))
