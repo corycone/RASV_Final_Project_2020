@@ -134,7 +134,7 @@ cneos_sentry_summary_data <- select(cneos_sentry_summary_data,
 
 ### Join the data
 
-We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs as well as a the subsetted one that includes only NEOs with a chance to strike Earth.
+We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs (though this may not be used too much) as well as a the subsetted one that includes only NEOs with a chance to strike Earth.
 
 ```{r}
 collision_NEO <- inner_join(cneos_closeapproach_data, 
@@ -255,6 +255,57 @@ Let's look at the structure as well.
 str(collision_NEO)
 ```
 
+## What percentage of know NEOs could strike Earth?
+
+Of all known NEOs, past and future, how many of them are flagged by the Sentry Earth Monitoring System?
+
+```{r}
+
+all_objects <- data.frame(unique(all_NEO$Object))
+all_prob_strike <- data.frame(unique(cneos_sentry_summary_data$UniqueID))
+
+```
 
 
+The unduplicated count of all objects is `r nrow(all_objects)`, and the unduplicated count of all objects with a potential to strike earth is `r nrow(all_prob_strike)`. That means **`r (nrow(all_prob_strike)/nrow(all_objects))*100`%** of all NEOs in our data have a probability to strike Earth.
 
+## Of those objects that could strike Earth, how many have have close approaches each decade?
+
+Because the data includes 299 years of NEO data, I'm going to look at it by decade. 
+
+```{r}
+min(year(ymd(collision_NEO$`Close-Approach_Date`)))
+max(year(ymd(collision_NEO$`Close-Approach_Date`)))
+
+collision_NEO <- collision_NEO %>% mutate(decade = floor(year(ymd(collision_NEO$`Close-Approach_Date`))/10)*10)
+```
+
+Do any decades stand out from the crowd?
+
+```{r}
+ggplot(collision_NEO) + geom_bar(aes(x = decade)) +
+  labs(title = "Number of Sentry Monitoring Close Approaches per Decade",
+       x = "Decade",
+       y = "Nbr. of Close Approaches") +
+  theme_minimal()
+```
+
+One might infer that the bell curve here is related to better technology helping to increase the rate of discovery of new NEOs, inflating the numbers closer to the present. Discovery date of objects is out the scope of this analysis, but there is a wonderful graphic showing the rate of discovery of new NEOs on [Wikipedia](https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Known_NEAs.png/600px-Known_NEAs.png) 
+
+It appears though that the decade 2010-2020 had/has the most close approaches of any other decade past or future. How many unique Objects passed by the Earth in that time? We can see already that there are ~1000 close approaches in that decade, and so another bar chart might be unreadable for this set. A better bet may be to group the subset by number of approaches, and see how that looks.
+
+```{r}
+collision_NEO_2010 <- collision_NEO %>% filter(decade == "2010")
+
+collision_NEO_2010_grp <- collision_NEO_2010 %>% group_by(Object) %>%
+  summarise(objects = n_distinct(`Close-Approach_Date`))
+
+ggplot(collision_NEO_2010_grp) + geom_histogram(aes(x = factor(collision_NEO_2010_grp$objects)), stat = "count") +
+  labs(title = "NEO Approaches on the Sentry Monitoring System",
+       subtitle = "Years 2010-2020",
+       x = "Nbr. of Approaches",
+       y = "Nbr. Objects") +
+  theme_minimal()
+```
+
+We can see the the 

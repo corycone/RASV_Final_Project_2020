@@ -166,6 +166,10 @@ ggplot(collision_NEO_00_20, aes(x = factor(collision_NEO_00_20$pscale), y = coll
 #color prep
 future_neo <- collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 2019,]
 
+
+min(year(ymd(collision_NEO$`Close-Approach_Date`)))
+
+
 #plotting pscale concern levels. Diameter divided by 65 for point size comparrison.
 ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$V_Relative)) +
   geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
@@ -262,3 +266,18 @@ palermo_concern <- collision_NEO[collision_NEO$pscale == "Careful Monitoring",]
 
 ggplot(palermo_concern, aes(x = palermo_concern$avg_diameter, y = palermo_concern$Potential_Impacts)) +
          geom_point()
+
+
+
+collision_NEO %>% mutate(decade = floor(year(ymd(collision_NEO$`Close-Approach_Date`))/10)*10) %>% 
+  group_by(decade) %>% 
+  summarize_all(sum) %>% 
+  select(-year)
+
+collision_NEO_2010$`Close-Approach_Date`
+ggplot(collision_NEO_2010_grp) + geom_histogram(aes(x = collision_NEO_2010_grp$objects), stat = "count") +
+  labs(title = "NEO Objects on the Sentry Monitoring System",
+       subtitle = "Years 2010-2020",
+       x = "Object Name",
+       y = "Nbr. of Close Approaches") +
+  theme_minimal()
