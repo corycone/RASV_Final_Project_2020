@@ -61,11 +61,7 @@ collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min <- c("1000","1000","1
 #convert to numeric
 collision_NEO$diam_min <- as.numeric(collision_NEO$diam_min)
 
-# Palermo Scale Translation
 
-collision_NEO$pscale[collision_NEO$Palermo_Scale_max < -2 ] <- "No Concern"
-collision_NEO$pscale[collision_NEO$Palermo_Scale_max < 1 & collision_NEO$Palermo_Scale_max > -2] <- "Careful Monitoring"
-collision_NEO$pscale[collision_NEO$Palermo_Scale_max > 0 ] <- "Some Concern"
 
 #create max diameter
 collision_NEO$diam_max <- str_split_fixed(collision_NEO$Est._Diameter, "-", 2)[1:nrow(collision_NEO),2]
@@ -82,11 +78,21 @@ collision_NEO[collision_NEO$diam_max %like% 'k',]$diam_max <- c("2300", "2300", 
 #convert to rounded numeric
 collision_NEO$diam_max <- as.numeric(collision_NEO$diam_max)
 
+
 #create average diameter
 collision_NEO$avg_diameter <- (collision_NEO$diam_min + collision_NEO$diam_max)/2
 
 #remove original estimated diameter column.
 collision_NEO <- select(collision_NEO, -Est._Diameter)
+
+
+
+# Palermo Scale Translation
+
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < -2 ] <- "No Concern"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < 1 & collision_NEO$Palermo_Scale_max > -2] <- "Careful Monitoring"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max > 0 ] <- "Some Concern"
+
 
 collision_NEO$approach_year <- year(ymd(collision_NEO$`Close-Approach_Date`))
 #P

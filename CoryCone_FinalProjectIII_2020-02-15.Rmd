@@ -1,0 +1,260 @@
+---
+title: "CNEOS Close Approach Data Exploration"
+author: "Cory Cone"
+date: "2/23/2020"
+output:
+  html_document: 
+    #highlight: tango
+    number_sections: yes
+    theme: "cosmo"
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, opts=list(width.cutoff=100))
+```
+
+# Introduction
+
+The Center for Near-Earth Object Studies (CNEOS) is a division of NASA computing ateroid and comit orbits and their odds of Earth Impact. (source: [https://cneos.jpl.nasa.gov/](https://cneos.jpl.nasa.gov/))
+
+For this analysis, I used datasets queried from the NEO database that include all NEOs matching a certain criteria (described below) as well as a second dataset of those that have any probability (past, present, future) of an hitting Earth.
+
+I wanted to analyze these datasets not only because the subject matter is exciting, but because this particular data is very new to me, and wanted to see how I did with data and values that were unfamiliar to those I'd worked with in the past (for instance, Lunar Distance and NEO Diameter). I also thought these particular datasets posed some tidying challenges that would be fun to solve, which we'll explore next.
+
+## Data Dictonary
+
+A lot of the terminology used within this dataset was new to me. I am including here the Data Dictionary for all fields and columns we'll be using in our analysis for reference. This can be found on [https://cneos.jpl.nasa.gov/ca/](https://cneos.jpl.nasa.gov/ca/) and [https://cneos.jpl.nasa.gov/sentry/](https://cneos.jpl.nasa.gov/sentry/) by expanding *Table Column Descriptions*.
+
+**NEO Earth Close Approaches**
+
+* Object: Designation of NEO (Name)
+* Close-Approach (CA) Date: Date and time (TDB) of closest Earth approach.
+* CA Distance Nominal (LD | au): The most likely (Nominal) close-approach distance (Earth center to NEO center), in LD (Lunar Distance) and au.
+* V relative (km/s): Object velocity relative to Earth at close-approach.
+* Estimated Diameter: Diameter range (min - max) estimated from the asteroid's absolute magnitude (H) and limiting albedos of 0.25 and 0.05.
+* au: One Astronomical Unit (au) is approximately 150 million kilometers 
+* LD: One Lunar Distance (LD) is approximately 384,000 kilometers
+
+**Sentry Earth Impact Monitoring**
+
+* Year Range: Time span over which impacts have been detected
+* Potential Impacts: Number of dynamically distinct potential impacts that have been detected by Sentry
+* Impact Probability (cumulative): Sum of the impact probabilities from all detected potential impacts.
+* Palermo Scale (cum.): Cumulative hazard rating according to the Palermo technical impact hazard scale, based on the tabulated impact date, impact probability and impact energy.
+* Palermo Scale (max.): Maximum hazard rating according to the Palermo technical impact hazard scale, based on the tabulated impact date, impact probability and impact energy.
+* Torino Scale (max.): Maximum detected hazard rating according to the Torino impact hazard scale, based on the tabulated impact probability and impact energy. The Torino scale is defined only for potential impacts less than 100 years in the future.
+
+# Required packages
+
+The required packages will be:
+
+* tidyverse, for data wrangling, cleaning, and plotting
+* lubridate, for date manipulation
+* stringr, for data wrangling and cleaning
+* data.table, for data wrangling and cleaning
+* RColorBrewer, for plotting
+
+```{r}
+library(tidyverse)
+library(RColorBrewer)
+library(lubridate)
+library(stringr)
+library(data.table)
+```
+
+# Data Prep
+## Download the NEO Datasets
+
+The datasets I used were downloaded on 2/18/2020.
+
+**NEO Close Approach Data** from: [https://cneos.jpl.nasa.gov/ca/](https://cneos.jpl.nasa.gov/ca/)
+
+Table Filters:
+
+* All Available Data
+* Nominal Dist. <=0.05au
+* no H limit
+
+**Sentry Earth Impact Monitoring** from [https://cneos.jpl.nasa.gov/sentry/](https://cneos.jpl.nasa.gov/sentry/)
+
+Table Filters:
+
+* Observed Anytime
+* Any Impact Probability
+* Any Palermo scale
+* Any H
+
+## Import
+
+Once downloaded, we can place them into a datafiles folder within out working directory and import into R.
+
+```{r}
+cneos_closeapproach_data <- read.csv("datafiles/cneos_closeapproach_data.csv", 
+                                     stringsAsFactors = FALSE)
+cneos_sentry_summary_data <- read.csv("datafiles/cneos_sentry_summary_data.csv", 
+                                      stringsAsFactors = FALSE)
+```
+
+## Clean & Prep
+
+There is a lot of prep to do here, and then possibly some follow-up prep as we go along. 
+
+### Clean column names
+
+```{r}
+colnames(cneos_closeapproach_data) <- c("Object", "Close-Approach_Date", "CA_Distance_Nominal", 
+                                        "CA_Distance_Minimum", "V_Relative", "V_Infinity", "H", "Est._Diameter", "UniqueID")
+
+colnames(cneos_sentry_summary_data) <- c("Object", "Year_Range", "Potential_Impacts", 
+                                         "Cum_Impact_Probability", "V_Infinity", "H", "Est._Diameter", 
+                                         "Palermo_Scale_cum", "Palermo_Scale_max", "Torino_Scale", "UniqueID")
+```
+
+### Format Close Approach Date
+
+```{r}
+cneos_closeapproach_data$`Close-Approach_Date` <-  substring(cneos_closeapproach_data$`Close-Approach_Date`,1,11)
+```
+
+### Remove unneeded columns
+
+```{r}
+cneos_closeapproach_data  <- select(cneos_closeapproach_data, 
+                                    -V_Infinity, 
+                                    -H, 
+                                    -CA_Distance_Minimum)
+cneos_sentry_summary_data <- select(cneos_sentry_summary_data, 
+                                    -Est._Diameter, 
+                                    -Object, 
+                                    -V_Infinity, 
+                                    -H)
+```
+
+### Join the data
+
+We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs as well as a the subsetted one that includes only NEOs with a chance to strike Earth.
+
+```{r}
+collision_NEO <- inner_join(cneos_closeapproach_data, 
+                            cneos_sentry_summary_data, 
+                            by = "UniqueID")
+all_NEO <- left_join(cneos_closeapproach_data, 
+                                cneos_sentry_summary_data, 
+                                by = "UniqueID")
+```
+
+### Fix Object Name
+
+One problem we can see is that the dataset has includes parenthesis around the Object names. I'd like to remove that to make our lives a bit easier. For instance, the first object in the dataset looks like this: `r collision_NEO$Object[1]`
+
+
+```{r}
+collision_NEO$Object <- gsub('[\\(\\)]', '', collision_NEO$Object)
+```
+
+Now, it looks better: `r collision_NEO$Object[1]`
+
+### Create Average Diameter Field
+
+The last initial data prep step I'd like to take before digging in has to do with the Estimated Diameter column, which at the moment looks like this:
+
+```{r}
+knitr::kable(
+  collision_NEO$Est._Diameter[1:5],
+  caption = "First 5 Rows of Estimated Diameter"
+)
+```
+
+This format format is pretty useless to us. I'd like to get those min and max values into their own columns, and then also create an *average diameter* column for each object that we can use.
+
+#### Minimum Diameter Range
+
+We'll start by isolating the minimum value into its own column.
+
+```{r}
+collision_NEO$diam_min <- str_split_fixed(collision_NEO$Est._Diameter, "-", 2)[1:nrow(collision_NEO)]
+```
+
+The data includes measurements of meters and kilometers. We'll clean up the the meters first. I run the the first line 3 times because it removes one space at a time, and I wanted to make sure it got all of them. I expect there is a better way to do this, but it got the job done. The second part removes the m from the string.
+
+```{r}
+collision_NEO$diam_min <- str_remove(collision_NEO[collision_NEO$diam_min %like% 'm',]$diam_min, "[ ]") 
+collision_NEO$diam_min <- str_remove(collision_NEO[collision_NEO$diam_min %like% 'm',]$diam_min, "[ ]") 
+collision_NEO$diam_min <- str_remove(collision_NEO[collision_NEO$diam_min %like% 'm',]$diam_min, "[ ]")
+collision_NEO$diam_min <- str_remove(collision_NEO$diam_min, "[m]") 
+```
+
+Some of the values were so big they went into kilometer measurements. My solution here is not terribly clean, but there were so few that it worked for this data set.
+
+Step 1: find the k values.
+
+```{r}
+collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min
+```
+
+Next, reassign them into their appropriate meter values, then finish off by making the column numeric.
+
+```{r}
+collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min <- c("1000","1000","1000","1000","1000","1000","1000","1000")
+collision_NEO$diam_min <- as.numeric(collision_NEO$diam_min)
+```
+
+Repeat the entire process for the maximum range.
+
+```{r}
+collision_NEO$diam_max <- str_split_fixed(collision_NEO$Est._Diameter, "-", 2)[1:nrow(collision_NEO),2]
+collision_NEO$diam_max <- str_remove(collision_NEO$diam_max, "[ ]") 
+collision_NEO$diam_max <- str_remove(collision_NEO$diam_max, "[ ]") 
+collision_NEO$diam_max <- str_remove(collision_NEO$diam_max, "[ ]")
+collision_NEO$diam_max <- str_remove(collision_NEO$diam_max, "[m]") 
+collision_NEO[collision_NEO$diam_max %like% 'k',]$diam_max <- c("2300", "2300", "1100", "1000",
+                                                                "2300", "1200", "2300", "2300",
+                                                                "2300", "2300", "2300")
+collision_NEO$diam_max <- as.numeric(collision_NEO$diam_max)
+```
+
+And finally, we can create a brand new column that has the **average diameter* of each NEO.
+
+```{r}
+collision_NEO$avg_diameter <- (collision_NEO$diam_min + collision_NEO$diam_max)/2
+```
+
+```{r}
+knitr::kable(
+  collision_NEO$avg_diameter[1:5],
+  caption = "First 5 Rows of New Average Diameter Column"
+)
+```
+
+
+Goodbye, original column!
+
+```{r}
+collision_NEO <- select(collision_NEO, -Est._Diameter)
+```
+
+### Polermo Scale Values
+
+Finally, I'd like to tranlate the Polermo Scale into a new column representing the level of concern.
+
+```{r}
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < -2 ] <- "No Concern"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max < 1 & collision_NEO$Palermo_Scale_max > -2] <- "Careful Monitoring"
+collision_NEO$pscale[collision_NEO$Palermo_Scale_max > 0 ] <- "Some Concern"
+```
+
+# The Data
+
+Our working dataset, now called **collision_NEO** has `r dim(collision_NEO)[1]` rows and `r dim(collision_NEO)[2]` columns.
+
+Let's look at the structure as well.
+
+```{r}
+str(collision_NEO)
+```
+
+
+
+
