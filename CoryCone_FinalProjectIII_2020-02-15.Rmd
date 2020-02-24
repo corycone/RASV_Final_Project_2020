@@ -346,6 +346,8 @@ ggplot(collision_NEO) +
 
 Visually, That appears to be the general trend throughout all of the data. 
 
+A box plot of the 2010-2020 decade shows it off nicely.
+
 ```{r}
 
 
@@ -357,8 +359,8 @@ colnames(collision_NEO_2010_month_count) <- c("Month", "Year", "n")
 ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
          geom_boxplot() +
          theme_minimal() +
-   labs(title = "All Sentry NEO Close Approaches by Month",
-       subtitle = "All Years Boxplot",
+   labs(title = "Sentry NEO Close Approaches by Month",
+       subtitle = "2010-2020, Boxplot",
        x = "Month",
        y = "Total NEO Approaches")
 
@@ -443,7 +445,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
   theme_minimal() +
   labs(title = "All Sentry NEO Object Diameters",
        x = "Average Diameter",
-       y = "Total NEO Approaches (Density)")
+       y = "Total NEO Approaches")
 ```
 
 
@@ -456,7 +458,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
   labs(title = "All Sentry NEO Object Diameters",
        subtitle = "550m or smaller",
        x = "Average Diameter",
-       y = "Total NEO Approaches (Density)") +
+       y = "Total NEO Approaches") +
   xlim(0,550)
 ```
 
@@ -471,7 +473,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
   labs(title = "All Sentry NEO Object Diameters",
        subtitle = "200m or smaller",
        x = "Average Diameter",
-       y = "Total NEO Approaches (Density)") +
+       y = "Total NEO Approaches") +
   xlim(0,200)
 ```
 
@@ -548,17 +550,60 @@ This gives us a nice idea of how concerning a threat is, how many times it may p
 ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts)) +
   geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
   geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$Potential_Impacts), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+  #geom_point(aes(x = factor(collision_NEO$pscale)[104], y = 200), size = 3, vjust = 100) +
   labs(title = "Palermo Scale of All Sentry NEOs vs Potential Impacts",
        subtitle = "Red = Future Approach, Blue = Past Approach, Point size relative to avg. Diameter (m).",
        x = "Palermo Scale",
        y = "Potential Impacts") +
   theme_minimal() +
+   #scale_colour_manual(name = 'the colour', 
+        # values =c('black'='black','red'='red'), labels = c('c2','c1')) +
   ylim(-50, 350)
 ```
+
+
+## Lunar Distance
+
+One measurement we haven't looked at yet is Lunar Distance. 1 LD = the distance between the Earth and the Moon. This information is included in the dataset, but it's combined with AU (distance between Earth and the Sun), so we'll need to split it out, similar to what we did with Avg. Diameter, and add them to their own column.
+
+```{r}
+collision_NEO$lunar_distance <- as.numeric(substr(collision_NEO$CA_Distance_Nominal,1,5))
+```
+
+I'd like to do a quick correlation analysis with these numbers now.
+
+```{r}
+all_cor <- cor(collision_NEO[, c("V_Relative", "avg_diameter", "Potential_Impacts", "Palermo_Scale_max", "decade", "lunar_distance")], use = "complete")
+print(all_cor)
+```
+
+
+```{r}
+pairs(data = collision_NEO, ~Potential_Impacts + avg_diameter + Palermo_Scale_max + lunar_distance + decade + V_Relative)
+```
+
+Lunar Distance appears to have no correlation at all to the other measurements, which surprises me, but there it is.
+
+Let's get a feel for the distribution of distances.
+
+```{r}
+ggplot(collision_NEO, aes(x = as.numeric(collision_NEO$lunar_distance))) +
+  geom_histogram(bins = 35) +
+  geom_vline(aes(xintercept=mean(as.numeric(collision_NEO$lunar_distance))),linetype="dashed") +
+  annotate("text", x = 55, y = 400, label = paste("Mean Lunar Distance:", mean(collision_NEO$avg_diameter)), color = "black") +
+  theme_minimal() +
+  labs(title = "All Sentry NEO Object Lunar Distances",
+       x = "Lunar Distance",
+       y = "Total NEO Approaches")
+```
+
+This is an interesting distribution. Many more close approaches occure at or below 3 Lunar Distances, and then the number of approaches beyond that stay relatively even. Lunar distance appears to be somewhat uniform, and uncorrelated with any other measaurements. 
+
 
 # Conclusion
 
 While we were able to scrape together a minor correlaton at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a futher reading, thought I theorize (with only this analysis as proof, for now) it must have something about the angle of the Earth at that time of year.
 
-It's a thrilling dataset to work with, and allows a lot of opportunity for data cleaning and manipulation. As far as visual analytics, I've only scratched the surface here. I believe there area a lot of exciting avenues this dataset could lead, depending on which way you look at it.
+I expect there is even more to glean from this dataset, and would love to dig in further in the future.
+
 

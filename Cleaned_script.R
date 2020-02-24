@@ -365,3 +365,34 @@ ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$av
   theme_minimal() +
   ylim(0, 2000)
 
+
+
+collision_NEO$lunar_distance <- substr(collision_NEO$CA_Distance_Nominal,1,5)
+
+ 
+
+
+collision_NEO[collision_NEO$diam_max %like% 'k',]$diam_max <- c("2300", "2300", "1100", "1000",
+                                                                "2300", "1200", "2300", "2300",
+                                                                "2300", "2300", "2300")
+collision_NEO$diam_max <- as.numeric(collision_NEO$diam_max)
+
+
+collision_NEO_2010 <- collision_NEO %>% filter(decade == "2010")
+
+collision_NEO_2010_grp <- collision_NEO_2010 %>% group_by(Object) %>%
+  summarise(objects = n_distinct(`Close-Approach_Date`))
+
+collision_NEO_2010_month_count <- collision_NEO_2010 %>% 
+  count(month(ymd(collision_NEO_2010$`Close-Approach_Date`)), year(ymd(collision_NEO_2010$`Close-Approach_Date`))) 
+colnames(collision_NEO_2010_month_count) <- c("Month", "Year", "n")
+
+
+ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "All Sentry NEO Close Approaches by Month",
+       subtitle = "All Years Boxplot",
+       x = "Month",
+       y = "Total NEO Approaches")
+
