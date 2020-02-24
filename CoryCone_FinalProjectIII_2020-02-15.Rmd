@@ -6,7 +6,7 @@ output:
   html_document: 
     #highlight: tango
     number_sections: yes
-    theme: "cosmo"
+    theme: "paper"
     toc: TRUE
     toc_float: TRUE
 ---
@@ -17,13 +17,13 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, opts=list(w
 
 # Introduction
 
-The Center for Near-Earth Object Studies (CNEOS) is a division of NASA computing ateroid and comit orbits and their odds of Earth Impact. (source: [https://cneos.jpl.nasa.gov/](https://cneos.jpl.nasa.gov/))
+The Center for Near-Earth Object Studies (CNEOS) is a division of NASA computing asteroid and comet orbits and their odds of Earth Impact. (source: [https://cneos.jpl.nasa.gov/](https://cneos.jpl.nasa.gov/))
 
 For this analysis, I used datasets queried from the NEO database that include all NEOs matching a certain criteria (described below) as well as a second dataset of those that have any probability (past, present, future) of an hitting Earth.
 
 I wanted to analyze these datasets not only because the subject matter is exciting, but because this particular data is very new to me, and wanted to see how I did with data and values that were unfamiliar to those I'd worked with in the past (for instance, Lunar Distance and NEO Diameter). I also thought these particular datasets posed some tidying challenges that would be fun to solve, which we'll explore next.
 
-## Data Dictonary
+## Data Dictionary
 
 A lot of the terminology used within this dataset was new to me. I am including here the Data Dictionary for all fields and columns we'll be using in our analysis for reference. This can be found on [https://cneos.jpl.nasa.gov/ca/](https://cneos.jpl.nasa.gov/ca/) and [https://cneos.jpl.nasa.gov/sentry/](https://cneos.jpl.nasa.gov/sentry/) by expanding *Table Column Descriptions*.
 
@@ -54,11 +54,9 @@ The required packages will be:
 * lubridate, for date manipulation
 * stringr, for data wrangling and cleaning
 * data.table, for data wrangling and cleaning
-* RColorBrewer, for plotting
 
 ```{r}
 library(tidyverse)
-library(RColorBrewer)
 library(lubridate)
 library(stringr)
 library(data.table)
@@ -97,6 +95,19 @@ cneos_sentry_summary_data <- read.csv("datafiles/cneos_sentry_summary_data.csv",
                                       stringsAsFactors = FALSE)
 ```
 
+```{r}
+knitr::kable(
+  cneos_closeapproach_data[1:5,],
+  caption = "First 5 Rows of All NEO Close Approach Data"
+)
+
+knitr::kable(
+  cneos_sentry_summary_data[1:5,],
+  caption = "First 5 Rows of Sentry Monitoring System Data"
+)
+```
+
+
 ## Clean & Prep
 
 There is a lot of prep to do here, and then possibly some follow-up prep as we go along. 
@@ -134,7 +145,7 @@ cneos_sentry_summary_data <- select(cneos_sentry_summary_data,
 
 ### Join the data
 
-We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs (though this may not be used too much) as well as a the subsetted one that includes only NEOs with a chance to strike Earth.
+We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs (though this may not be used too much) as well as a the subset of NEOs with a chance to strike Earth.
 
 ```{r}
 collision_NEO <- inner_join(cneos_closeapproach_data, 
@@ -188,7 +199,7 @@ collision_NEO$diam_min <- str_remove(collision_NEO$diam_min, "[m]")
 
 Some of the values were so big they went into kilometer measurements. My solution here is not terribly clean, but there were so few that it worked for this data set.
 
-Step 1: find the k values.
+Next, we find the k values.
 
 ```{r}
 collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min
@@ -237,7 +248,7 @@ collision_NEO <- select(collision_NEO, -Est._Diameter)
 
 ### Polermo Scale Values
 
-Finally, I'd like to tranlate the Polermo Scale into a new column representing the level of concern.
+Finally, I'd like to translate the Polermo Scale into a new column representing the level of concern.
 
 ```{r}
 collision_NEO$pscale[collision_NEO$Palermo_Scale_max < -2 ] <- "No Concern"
@@ -249,13 +260,13 @@ collision_NEO$pscale[collision_NEO$Palermo_Scale_max > 0 ] <- "Some Concern"
 
 Our working dataset, now called **collision_NEO** has `r dim(collision_NEO)[1]` rows and `r dim(collision_NEO)[2]` columns.
 
-Let's look at the structure as well.
+Here is its structure.
 
 ```{r}
 str(collision_NEO)
 ```
 
-## What percentage of know NEOs could strike Earth?
+## What percentage of known NEOs could strike Earth?
 
 Of all known NEOs, past and future, how many of them are flagged by the Sentry Earth Monitoring System?
 
@@ -265,7 +276,6 @@ all_objects <- data.frame(unique(all_NEO$Object))
 all_prob_strike <- data.frame(unique(cneos_sentry_summary_data$UniqueID))
 
 ```
-
 
 The unduplicated count of all objects is `r nrow(all_objects)`, and the unduplicated count of all objects with a potential to strike earth is `r nrow(all_prob_strike)`. That means **`r (nrow(all_prob_strike)/nrow(all_objects))*100`%** of all NEOs in our data have a probability to strike Earth.
 
@@ -312,7 +322,7 @@ ggplot(collision_NEO_2010_grp) + geom_histogram(aes(x = factor(collision_NEO_201
 
 Most objects in the last decade, it seems, passed by only once.
 
-## 2010-2020 NEO Sentry Data by Year
+### 2010-2020 NEO Sentry Data by Year
 
 What does the by year breakdown look like for this period?
 
@@ -330,7 +340,7 @@ ggplot(collision_NEO_2010) +
 
 Visually, we can see see a bit of a trend here. It appears colder months have more NEO approaches than warmer ones except 2013. 
 
-What would an all-time month by month breakdown look like?
+### What would an all-time month by month breakdown look like?
 
 ```{r}
 ggplot(collision_NEO) +
@@ -366,7 +376,7 @@ ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
 
 ```
 
-It would seem that October is the most active month for Sentry Monitored NEO Close Approeaches.
+It would seem that October is the most active month for Sentry Monitored NEO Close Approaches.
 
 ## How fast are they going?
 
@@ -401,12 +411,10 @@ ggplot(collision_NEO_2010, aes(x = V_Relative)) +
 We can overlay all this information, along with the true standard normal curves for each distribution to see even clearer that the trend continues within the entire population.
 
 ```{r}
-
+# generate curves
 v_2010_norm <- dnorm(collision_NEO_2010$V_Relative, mean(collision_NEO_2010$V_Relative), sd(collision_NEO_2010$V_Relative))
 v_all_norm <- dnorm(collision_NEO$V_Relative, mean(collision_NEO$V_Relative), sd(collision_NEO$V_Relative))
-
-
-
+# plot
 ggplot(collision_NEO_2010, aes(x = V_Relative, y = ..density..)) +
   geom_histogram(bins = 25, alpha = .5) +
   geom_histogram(data = collision_NEO, aes(x = collision_NEO$V_Relative, y = ..density..), fill = "blue", alpha = .3) +
@@ -433,7 +441,7 @@ ggplot(collision_NEO, aes(x = factor(month(ymd(collision_NEO$`Close-Approach_Dat
        y = "Velocity (km/sec) of NEO Approaches")
 ```
 
-Even a quick glance at this boxplot shows that speed has no reasonably impact on what month it may approach.
+Even a quick glance at this box plot shows that speed has no reasonably impact on what month it may approach.
 
 ## But wait...how big are these things?
 
@@ -449,7 +457,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
 ```
 
 
-An enormous outlier is making this histogram difficult to read. We can try limiting the x axix
+An enormous outlier is making this histogram difficult to read. We can try limiting the x axis
 
 ```{r}
 ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
@@ -479,7 +487,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
 
 This is better, and gives a good look at how the objects are very positively skewed. Most, it seems, are (relatively) small.
 
-## Is there any correlation to the size of an object and it's speed?
+## Is there any correlation to the size of an object and its speed?
 
 ```{r}
 ggplot(collision_NEO, aes(x = V_Relative, y = avg_diameter)) +
@@ -497,8 +505,9 @@ Right off the bat this feels highly uncorrelated. Let's run it through the cor()
 cor(collision_NEO$avg_diameter, collision_NEO$V_Relative)
 ```
 
-This doesn't feel worth following. But is there a correlation somewhere here we can follow? 
+This doesn't feel worth following.
 
+## But is there a correlation somewhere here we can follow? 
 
 ```{r}
 all_cor <- cor(collision_NEO[, c("V_Relative", "avg_diameter", "Potential_Impacts", "Palermo_Scale_max", "decade")], use = "complete")
@@ -507,60 +516,70 @@ print(all_cor)
 
 The three categories that approach something even slightly above a negligible correlation are Palermo Scale Max, Average Diameter, and Potential Impacts.
 
-Let's scatterplot matrix these and get a look.
+Let's scatter plot matrix these and get a look.
 
 ```{r}
 pairs(data = collision_NEO, ~Potential_Impacts + avg_diameter + Palermo_Scale_max)
 ```
 
-
-Let's dig a touch more into Palermo Scale Max and Average Diameter.
+Now, we'll dig a touch more into Palermo Scale Max and Average Diameter.
 
 ```{r}
 
 future_neo <- collision_NEO[year(ymd(collision_NEO$`Close-Approach_Date`)) > 2019,]
 
-ggplot(collision_NEO, aes(x = collision_NEO$Palermo_Scale_max, y = collision_NEO$avg_diameter)) +
-  geom_point(alpha = .3, color = "skyblue") +
-  geom_point(data = future_neo, aes(x = future_neo$Palermo_Scale_max, y = future_neo$avg_diameter), alpha = .3, colour = "red") +
+ggplot(collision_NEO, aes(x = collision_NEO$Palermo_Scale_max, y = collision_NEO$avg_diameter, color = "skyblue")) +
+  geom_point(alpha = .3) +
+  geom_point(data = future_neo, aes(x = future_neo$Palermo_Scale_max, y = future_neo$avg_diameter, colour = "red"), alpha = .3) +
   labs(title = "Avg. Diameter by Palermo Scale Max",
-       subtitle = "Red = Future Approach, Blue = Past Appoach.",
        x = "Palermo Scale",
        y = "Avg. Diameter (m)") +
-    theme_minimal()
+    theme_minimal() +
+   scale_color_identity(name = "Time of Approach",
+                          breaks = c("red", "skyblue"),
+                          labels = c("Future", "Past"),
+                          guide = "legend")
+  
 ```
 
-While it's true that the correlation here is weak, it's also true that the number of smaller objects vastly outweights the larger ones. Would this correlation be strongly if the numbers weren't so skewed? We can see that aside from only one point, nearly all objects at, around or above 500m in diameter are inching closer to the the -2 cutoff for Polermo Scale. Of the entire dataset, only 1 crosses that barrier. 
+While it's true that the correlation here is weak, it's also true that the number of smaller objects vastly outweighs the larger ones. Would this correlation be strongly if the numbers weren't so skewed? We can see that aside from only one point, nearly all objects at, around or above 500m in diameter are inching closer to the the -2 cutoff for Polermo Scale. Of the entire dataset, only 1 crosses that barrier. 
 
 ```{r}
-ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts)) +
-  geom_point(size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
-  geom_point(data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$Potential_Impacts), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts, color = "skyblue")) +
+  geom_point(size = collision_NEO$avg_diameter/65, alpha = .3) +
+  geom_point(data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$Potential_Impacts,  colour = "red"), size = future_neo$avg_diameter/65, alpha = .3) +
   labs(title = "Palermo Scale of All Sentry NEOs vs Potential Impacts",
-       subtitle = "Red = Future Approach, Blue = Past Approach. Point size relative to avg. Diameter (m).",
+       subtitle = "Point size relative to avg. Diameter (m).",
        x = "Palermo Scale",
        y = "Potential Impacts") +
   theme_minimal() +
-  ylim(-150, max(collision_NEO$Potential_Impacts))
+  ylim(-150, max(collision_NEO$Potential_Impacts)) +
+  scale_color_identity(name = "Time of Approach",
+                          breaks = c("red", "skyblue"),
+                          labels = c("Future", "Past"),
+                          guide = "legend")
 ```
 
-This gives us a nice idea of how concerning a threat is, how many times it may pose a threat, and how big that threat might be: Which, considering only one object is in the Careful Monitorying category of the Palermo Scale, isn't much at all. Visually, though, this lacks the true representation of how often these approaches have, and will occure. Let's jitter the points and limit the y axis a touch to get a better idea. 
+This gives us a nice idea of how concerning a threat is, how many times it may pose a threat, and how big that threat might be: Which, considering only one object is in the Careful Monitoring category of the Palermo Scale, isn't much at all. Visually, though, this lacks the true representation of how often these approaches have, and will occur. Let's jitter the points and limit the y axis a touch to get a better idea. 
 
 ```{r}
-ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts)) +
-  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
-  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$Potential_Impacts), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts, color = "skyblue")) +
+  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3) +
+  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$Potential_Impacts, colour = "red"), size = future_neo$avg_diameter/65, alpha = .3) +
   #geom_point(aes(x = factor(collision_NEO$pscale)[104], y = 200), size = 3, vjust = 100) +
   labs(title = "Palermo Scale of All Sentry NEOs vs Potential Impacts",
-       subtitle = "Red = Future Approach, Blue = Past Approach, Point size relative to avg. Diameter (m).",
+       subtitle = "Point size relative to avg. Diameter (m).",
        x = "Palermo Scale",
        y = "Potential Impacts") +
   theme_minimal() +
    #scale_colour_manual(name = 'the colour', 
         # values =c('black'='black','red'='red'), labels = c('c2','c1')) +
-  ylim(-50, 350)
+  ylim(-50, 350) +
+  scale_color_identity(name = "Time of Approach",
+                          breaks = c("red", "skyblue"),
+                          labels = c("Future", "Past"),
+                          guide = "legend")
 ```
-
 
 ## Lunar Distance
 
@@ -584,7 +603,7 @@ pairs(data = collision_NEO, ~Potential_Impacts + avg_diameter + Palermo_Scale_ma
 
 Lunar Distance appears to have no correlation at all to the other measurements, which surprises me, but there it is.
 
-Let's get a feel for the distribution of distances.
+### Distribution of Lunar Distances.
 
 ```{r}
 ggplot(collision_NEO, aes(x = as.numeric(collision_NEO$lunar_distance))) +
@@ -597,12 +616,27 @@ ggplot(collision_NEO, aes(x = as.numeric(collision_NEO$lunar_distance))) +
        y = "Total NEO Approaches")
 ```
 
-This is an interesting distribution. Many more close approaches occure at or below 3 Lunar Distances, and then the number of approaches beyond that stay relatively even. Lunar distance appears to be somewhat uniform, and uncorrelated with any other measaurements. 
+This is an interesting distribution. Many more close approaches occur at or below 3 Lunar Distances, and then the number of approaches beyond that stay relatively even. Lunar distance appears to be somewhat uniform, and uncorrelated with any other measurements. 
 
 
 # Conclusion
 
-While we were able to scrape together a minor correlaton at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a futher reading, thought I theorize (with only this analysis as proof, for now) it must have something about the angle of the Earth at that time of year.
+While we were able to scrape together a minor correlation at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a further reading, thought I theorize (with only this analysis as proof, for now) it must have something about the angle of the Earth at that time of year.
+
+```{r}
+
+
+
+ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
+         geom_boxplot(fill = c("white","white","white","white","white","white","white","white","white","orange","white","white")) +
+         theme_minimal() +
+   labs(title = "October Generally Sees the Highest Close Approaches",
+       subtitle = "2010-2020, Boxplot",
+       x = "Month",
+       y = "Total NEO Approaches")
+
+```
+
 
 I expect there is even more to glean from this dataset, and would love to dig in further in the future.
 
