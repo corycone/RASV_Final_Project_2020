@@ -19,13 +19,13 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, opts=list(w
 
 The Center for Near-Earth Object Studies (CNEOS) is a division of NASA computing asteroid and comet orbits and their odds of Earth Impact. (source: [https://cneos.jpl.nasa.gov/](https://cneos.jpl.nasa.gov/))
 
-For this analysis, I used datasets queried from the NEO database that include all NEOs matching a certain criteria (described below) as well as a second dataset of those that have any probability (past, present, future) of an hitting Earth.
+For this analysis, I used a dataset queried from the NEO database that include all NEOs matching a certain criteria (described below) as well as a second dataset of those that have any probability (past, present, future) of hitting Earth.
 
-I wanted to analyze these datasets not only because the subject matter is exciting, but because this particular data is very new to me, and wanted to see how I did with data and values that were unfamiliar to those I'd worked with in the past (for instance, Lunar Distance and NEO Diameter). I also thought these particular datasets posed some tidying challenges that would be fun to solve, which we'll explore next.
+I wanted to analyze these not only because the subject matter is exciting, but because this particular data is very new to me, and I wanted to see how I did with data and values that were unfamiliar to those I'd worked with in the past (for instance, Lunar Distance and NEO Diameter). I also thought these particular datasets posed some tidying challenges that would be fun to solve, which we'll explore next.
 
 ## Data Dictionary
 
-A lot of the terminology used within this dataset was new to me. I am including here the Data Dictionary for all fields and columns we'll be using in our analysis for reference. This can be found on [https://cneos.jpl.nasa.gov/ca/](https://cneos.jpl.nasa.gov/ca/) and [https://cneos.jpl.nasa.gov/sentry/](https://cneos.jpl.nasa.gov/sentry/) by expanding *Table Column Descriptions*.
+A lot of the terminology used here was new to me. I am including here the Data Dictionary for all fields and columns we'll be using in our analysis for reference. This can be found on [https://cneos.jpl.nasa.gov/ca/](https://cneos.jpl.nasa.gov/ca/) and [https://cneos.jpl.nasa.gov/sentry/](https://cneos.jpl.nasa.gov/sentry/) by expanding *Table Column Descriptions*.
 
 **NEO Earth Close Approaches**
 
@@ -89,10 +89,8 @@ Table Filters:
 Once downloaded, we can place them into a datafiles folder within out working directory and import into R.
 
 ```{r}
-cneos_closeapproach_data <- read.csv("datafiles/cneos_closeapproach_data.csv", 
-                                     stringsAsFactors = FALSE)
-cneos_sentry_summary_data <- read.csv("datafiles/cneos_sentry_summary_data.csv", 
-                                      stringsAsFactors = FALSE)
+cneos_closeapproach_data <- read.csv("datafiles/cneos_closeapproach_data.csv", stringsAsFactors = FALSE)
+cneos_sentry_summary_data <- read.csv("datafiles/cneos_sentry_summary_data.csv", stringsAsFactors = FALSE)
 ```
 
 ```{r}
@@ -145,7 +143,7 @@ cneos_sentry_summary_data <- select(cneos_sentry_summary_data,
 
 ### Join the data
 
-We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs (though this may not be used too much) as well as a the subset of NEOs with a chance to strike Earth.
+We can now join the two datasets. We'll be doing a left outer and an inner join, so that we have the option to explore the entire set of NEOs (though this may not be used too much) as well as a subset of NEOs with a chance to strike Earth.
 
 ```{r}
 collision_NEO <- inner_join(cneos_closeapproach_data, 
@@ -158,7 +156,7 @@ all_NEO <- left_join(cneos_closeapproach_data,
 
 ### Fix Object Name
 
-One problem we can see is that the dataset has includes parenthesis around the Object names. I'd like to remove that to make our lives a bit easier. For instance, the first object in the dataset looks like this: `r collision_NEO$Object[1]`
+One problem we can see is that the dataset includes parenthesis around the Object names. I'd like to remove that to make our lives a bit easier. For instance, the first object in the dataset looks like this: `r collision_NEO$Object[1]`
 
 
 ```{r}
@@ -178,7 +176,7 @@ knitr::kable(
 )
 ```
 
-This format format is pretty useless to us. I'd like to get those min and max values into their own columns, and then also create an *average diameter* column for each object that we can use.
+This format is pretty useless to us. I'd like to get those **min** and **max** values into their own columns, and then also create an **average diameter** column for each object that we can use.
 
 #### Minimum Diameter Range
 
@@ -188,7 +186,7 @@ We'll start by isolating the minimum value into its own column.
 collision_NEO$diam_min <- str_split_fixed(collision_NEO$Est._Diameter, "-", 2)[1:nrow(collision_NEO)]
 ```
 
-The data includes measurements of meters and kilometers. We'll clean up the the meters first. I run the the first line 3 times because it removes one space at a time, and I wanted to make sure it got all of them. I expect there is a better way to do this, but it got the job done. The second part removes the m from the string.
+The data includes measurements of meters and kilometers. We'll clean up the the meters first. I run the first line 3 times because it removes one space at a time, and I wanted to make sure it got all of them. I expect there is a better way to do this, but it got the job done. The second part removes the m from the string.
 
 ```{r}
 collision_NEO$diam_min <- str_remove(collision_NEO[collision_NEO$diam_min %like% 'm',]$diam_min, "[ ]") 
@@ -199,7 +197,7 @@ collision_NEO$diam_min <- str_remove(collision_NEO$diam_min, "[m]")
 
 Some of the values were so big they went into kilometer measurements. My solution here is not terribly clean, but there were so few that it worked for this data set.
 
-Next, we find the k values.
+fIRST, we find the k values.
 
 ```{r}
 collision_NEO[collision_NEO$diam_min %like% 'k',]$diam_min
@@ -304,7 +302,7 @@ One might infer that the bell curve here is related to better technology helping
 
 ## 2010-2020 NEO Sentry Data
 
-It appears though that the decade 2010-2020 had/has the most close approaches of any other decade past or future. How many unique Objects passed by the Earth in that time? We can see already that there are ~1000 close approaches in that decade, and so another bar chart might be unreadable for this set. A better bet may be to group the subset by number of approaches, and see how that looks.
+It appears though that the decade 2010-2020 had/has the most close approaches of any other decade past or future. How many unique Objects passed by the Earth in that time? We can see already that there are ~1000 close approaches in that decade, and so should group the subset by number of approaches, and see how that looks.
 
 ```{r}
 collision_NEO_2010 <- collision_NEO %>% filter(decade == "2010")
@@ -354,7 +352,7 @@ ggplot(collision_NEO) +
        y = "Total NEO Approaches")
 ```
 
-Visually, That appears to be the general trend throughout all of the data. 
+That appears to be the general trend throughout all of the data. 
 
 A box plot of the 2010-2020 decade shows it off nicely.
 
@@ -456,8 +454,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
        y = "Total NEO Approaches")
 ```
 
-
-An enormous outlier is making this histogram difficult to read. We can try limiting the x axis
+An enormous outlier is making this histogram difficult to read. We can try limiting the x-axis
 
 ```{r}
 ggplot(collision_NEO, aes(x = collision_NEO$avg_diameter)) +
@@ -542,7 +539,7 @@ ggplot(collision_NEO, aes(x = collision_NEO$Palermo_Scale_max, y = collision_NEO
   
 ```
 
-While it's true that the correlation here is weak, it's also true that the number of smaller objects vastly outweighs the larger ones. Would this correlation be strongly if the numbers weren't so skewed? We can see that aside from only one point, nearly all objects at, around or above 500m in diameter are inching closer to the the -2 cutoff for Polermo Scale. Of the entire dataset, only 1 crosses that barrier. 
+While it's true that the correlation here is weak, it's also true that the number of smaller objects vastly outweighs the larger ones. Would this correlation be strongler if the numbers weren't so skewed? We can see that aside from only one point, nearly all objects at, around or above 500m in diameter are inching closer to the the -2 cutoff for Polermo Scale. Of the entire dataset, only 1 crosses that barrier. 
 
 ```{r}
 ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts, color = "skyblue")) +
@@ -560,7 +557,7 @@ ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Po
                           guide = "legend")
 ```
 
-This gives us a nice idea of how concerning a threat is, how many times it may pose a threat, and how big that threat might be: Which, considering only one object is in the Careful Monitoring category of the Palermo Scale, isn't much at all. Visually, though, this lacks the true representation of how often these approaches have, and will occur. Let's jitter the points and limit the y axis a touch to get a better idea. 
+This gives us a nice idea of how concerning a threat is, how many times it may pose a threat, and how big that threat might be: Which, considering only one object is in the **Careful** Monitoring category of the Palermo Scale, isn't much at all. Visually, though, this lacks the true representation of how often these approaches have, and will occur. Let's jitter the points and limit the y-axis a touch to get a better idea. 
 
 ```{r}
 ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$Potential_Impacts, color = "skyblue")) +
@@ -621,7 +618,7 @@ This is an interesting distribution. Many more close approaches occur at or belo
 
 # Conclusion
 
-While we were able to scrape together a minor correlation at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a further reading, thought I theorize (with only this analysis as proof, for now) it must have something about the angle of the Earth at that time of year.
+While we were able to scrape together a minor correlation at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a further reading, though I theorize (with limited evidence, for now) it must have something about the angle of the Earth at that time of year.
 
 ```{r}
 
