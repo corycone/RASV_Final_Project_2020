@@ -281,3 +281,87 @@ ggplot(collision_NEO_2010_grp) + geom_histogram(aes(x = collision_NEO_2010_grp$o
        x = "Object Name",
        y = "Nbr. of Close Approaches") +
   theme_minimal()
+
+mean(collision_NEO$V_Relative)
+
+collision_NEO_2010 %>% 
+  count(month(ymd(collision_NEO_2010$`Close-Approach_Date`)), year(ymd(collision_NEO_2010$`Close-Approach_Date`))) %>%
+ggplot(aes(x = month(ymd(collision_NEO_2010$`Close-Approach_Date`)), y = year(ymd(collision_NEO_2010$`Close-Approach_Date`)))) +
+  geom_tile(aes(fill = n))
+       
+       
+collision_NEO_2010_grp$Object[objects == "12",]
+
+
+
+collision_NEO_2010_month_count <- collision_NEO_2010 %>% 
+  count(month(ymd(collision_NEO_2010$`Close-Approach_Date`)), year(ymd(collision_NEO_2010$`Close-Approach_Date`))) 
+colnames(collision_NEO_2010_month_count) <- c("Month", "Year", "n")
+
+ggplot(collision_NEO_2010_month_count, aes(x = Month, y = Year)) +
+  geom_tile(size = collision_NEO_2010_month_count$n, fill = collision_NEO_2010_month_count$n)
+
+
+
+
+ggplot(collision_NEO_2010_month_count) +
+  geom_boxplot(aes(x = Month, y = n)) +
+  #facet_wrap(~year(ymd(collision_NEO_2010$`Close-Approach_Date`))) +
+  theme_minimal() +
+  #theme(axis.text.x = element_blank()) +
+  labs(title = "All NEO Close Approaches by Month",
+       subtitle = "All Years",
+       x = "Month",
+       y = "Total NEO Approaches")
+
+
+
+v_2010_norm <- dnorm(collision_NEO_2010$V_Relative, mean(collision_NEO_2010$V_Relative), sd(collision_NEO_2010$V_Relative))
+v_all_norm <- dnorm(collision_NEO$V_Relative, mean(collision_NEO$V_Relative), sd(collision_NEO$V_Relative))
+
+
+
+ggplot(collision_NEO_2010, aes(x = V_Relative, y = ..density..)) +
+  geom_histogram(bins = 25, alpha = .5) +
+  geom_histogram(data = collision_NEO, aes(x = collision_NEO$V_Relative, y = ..density..), fill = "blue", alpha = .3) +
+  geom_line(data = collision_NEO, aes(x = collision_NEO$V_Relative, y = v_all_norm), color = "blue") +
+  geom_line(data = collision_NEO_2010, aes(x = collision_NEO_2010$V_Relative, y = v_2010_norm)) +
+  #geom_vline(aes(xintercept=mean(collision_NEO_2010$V_Relative)),linetype="dashed") +
+  #annotate("text", x = 22, y = 145, label = paste("Mean Velocity:", mean(collision_NEO_2010$V_Relative), " km/sec"), color = "black") +
+  theme_minimal() +
+  labs(title = "Comparing 2010 Decade Subset & All Time Sentry NEO Data",
+       subtitle = "Blue Histogram & Line = All Time Data",
+       x = "Velocity at Close Approach Distance",
+       y = "Total NEO Approaches")
+
+
+
+
+
+collision_NEO_2010_month_count <- collision_NEO_2010 %>% 
+  count(month(ymd(collision_NEO_2010$`Close-Approach_Date`)), year(ymd(collision_NEO_2010$`Close-Approach_Date`))) 
+colnames(collision_NEO_2010_month_count) <- c("Month", "Year", "n")
+
+
+ggplot(collision_NEO, aes(x = factor(month(ymd(collision_NEO$`Close-Approach_Date`))), y = V_Relative)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "All Sentry NEO Velocities by Month",
+       subtitle = "All Years Boxplot",
+       x = "Month",
+       y = "Velocity (km/sec) of NEO Approaches")
+
+collision_NEO %>% group_by(Object, Palermo_Scale_max) %>% arrange()
+
+
+
+ggplot(collision_NEO, aes(x = factor(collision_NEO$pscale), y = collision_NEO$avg_diameter)) +
+  geom_point(position = "jitter", size = collision_NEO$avg_diameter/65, alpha = .3, color = "skyblue") +
+  geom_point(position = "jitter", data = future_neo, aes(x = factor(future_neo$pscale), y = future_neo$avg_diameter), size = future_neo$avg_diameter/65, alpha = .3, colour = "red") +
+  labs(title = "Palermo Scale of All Sentry NEOs vs Avg. Diameter (m)",
+       subtitle = "Red = Future NEO, Blue = Past NEO. Point size relative to avg. Diameter.",
+       x = "Palermo Scale",
+       y = "Avg. Diameter (m)") +
+  theme_minimal() +
+  ylim(0, 2000)
+
