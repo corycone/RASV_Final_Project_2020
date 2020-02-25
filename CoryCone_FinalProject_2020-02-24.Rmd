@@ -9,6 +9,7 @@ output:
     theme: "paper"
     toc: TRUE
     toc_float: TRUE
+    code_folding: show
 ---
 
 ```{r setup, include=FALSE}
@@ -376,6 +377,38 @@ ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
 
 It would seem that October is the most active month for Sentry Monitored NEO Close Approaches.
 
+```{r}
+collision_NEO_2010_month_count$Month  <- factor(collision_NEO_2010_month_count$Month)
+
+levels(collision_NEO_2010_month_count$Month) <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
+         geom_boxplot(fill = c("white","white","white","white","white","white","white","white","white","orange","white","white")) +
+         theme_minimal() +
+   labs(title = "October Generally Sees the Highest Close Approaches",
+       subtitle = "2010-2020, Boxplot",
+       x = "Month",
+       y = "Total NEO Approaches")
+```
+
+And once more with points per year.
+
+```{r}
+library(RColorBrewer)
+
+ggplot(collision_NEO_2010_month_count, aes(x = Month, y = n)) +
+  geom_point(size = 3, alpha = 1, aes(color = factor(collision_NEO_2010_month_count$Year))) +
+  scale_color_brewer(type = "qual", palette = "Paired") +
+  geom_boxplot(alpha = 0) +
+  theme_minimal() +
+  labs(title = "Near-Earth Approach Count of Objects With Any Potential to Impact Earth",
+       subtitle = "Count of Yearly Approaches, by Month. Years: 2010-2020",
+       x = "Month",
+       y = "Total NEO Approaches",
+       color = "Year")
+```
+
+
 ## How fast are they going?
 
 Can we get a sense of the speed of the objects?
@@ -620,21 +653,4 @@ This is an interesting distribution. Many more close approaches occur at or belo
 
 While we were able to scrape together a minor correlation at the end, the only repeatable pattern to be found was the October spike of NEO Approaches. This could be worthy of a further reading, though I theorize (with limited evidence, for now) it must have something about the angle of the Earth at that time of year.
 
-```{r}
-
-
-
-ggplot(collision_NEO_2010_month_count, aes(x = factor(Month), y = n)) +
-         geom_boxplot(fill = c("white","white","white","white","white","white","white","white","white","orange","white","white")) +
-         theme_minimal() +
-   labs(title = "October Generally Sees the Highest Close Approaches",
-       subtitle = "2010-2020, Boxplot",
-       x = "Month",
-       y = "Total NEO Approaches")
-
-```
-
-
-I expect there is even more to glean from this dataset, and would love to dig in further in the future.
-
-
+I believe this particular avenue of the dataset could be an entire analysis document of its own.
